@@ -35,7 +35,7 @@ class XOR(nn.Module):
     
     def forward(self, x):
         x = self.lin1(x)
-        x = F.sigmoid(x)
+        x = torch.sigmoid(x)
         x = self.lin2(x)
         return x
     
@@ -62,13 +62,13 @@ stagnation = 1000
 epochLimit = 5000
 
 # Número de experimentos
-experiments = 10
+experiments = 100
 
 # Variável que conta o número de épocas
 epochs = 0
 
 # Lista com um conjunto de taxas de aprendizado 
-LRate = [0.1,0.01,0.001,0.0001]
+LRate = [0.09]
 
 # Estruturas para guaradar o número de épocas por experimento
 # e gerar o arquivo de saída em Tex
@@ -76,7 +76,7 @@ numbers = []
 table = []
 
 # Endereço para guardar os arquivos gerados
-address = '/home/serafim/git/pytorchExperiments/experimento_' + str(1)
+address = '/home/serafim/git/neuralnetworkpytorch/experimento_' + str(1)
 
 # TODO - AINDA É NECESSÁRIO ESTUDAR A BIBLIOTECA A RESPEITO DOS OTIMIZADORES
 # POR ELA UTILIZADOS. OUTRA INFORMAÇÃO QUE PRECISO ENTENDER É SOBRE A TAXA
@@ -100,7 +100,7 @@ for rate in LRate:
         # Função de erro.
         loss_func = nn.MSELoss()
         # Otimizador.
-        optimizer = optim.SGD(model.parameters(), lr=0.02, momentum=0.9)
+        optimizer = optim.SGD(model.parameters(), lr=rate, momentum=0.9)
         
         # Variáveis que contabilizam os erros para
         # estagnação da rede.
@@ -137,8 +137,8 @@ for rate in LRate:
                 countError = 0
                 
             # Verifica se a rede estagnou
-            # Se atingir o limite de experimentos o experimento para
-            if countError == stagnation or epochs == 10000:
+            # Se atingir o limite de epocas o experimento para
+            if countError == stagnation or epochs == epochLimit:
                 epochs = 0
                 break
                 
