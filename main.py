@@ -56,19 +56,19 @@ steps = X.size(0)
 
 # Limite de épocas necessárias sem mudança no erro
 # para que seja considerada a estagnação da rede
-stagnation = 1000
+stagnation = 5000
 
 # Limite máximo de épocas para cada experimento
-epochLimit = 5000
+epochLimit = 10000
 
 # Número de experimentos
-experiments = 100
+experiments = 1200
 
 # Variável que conta o número de épocas
 epochs = 0
 
 # Lista com um conjunto de taxas de aprendizado 
-LRate = [0.09]
+LRate = [0.1,0.01,0.001,0.0001]
 
 # Estruturas para guaradar o número de épocas por experimento
 # e gerar o arquivo de saída em Tex
@@ -78,18 +78,8 @@ table = []
 # Endereço para guardar os arquivos gerados
 address = '/home/serafim/git/neuralnetworkpytorch/experimento_' + str(1)
 
-# TODO - AINDA É NECESSÁRIO ESTUDAR A BIBLIOTECA A RESPEITO DOS OTIMIZADORES
-# POR ELA UTILIZADOS. OUTRA INFORMAÇÃO QUE PRECISO ENTENDER É SOBRE A TAXA
-# DE APRENDIZADO, OU SEJA, ONDE ELA ENTRA COMO PARÂMETRO. INICIALMENTE ME
-# PREOCUPEI EM ESCREVER O CODIGO PARA ATENDER ALGUMAS DOS NOSSOS PARAMÉTROS
-# DOS EXPERIMENTOS. PARA SOMENTE DEPOIS ESTUDAR A FUNDO ESTES OUTROS ASPECTOS
-# DA BIBLIOTECA.
-
 # Aqui teremos uma quantidade LRate de experimentos.
 # Para cada taxa vamos fazer um número experiments de vezes
-
-# TODO - QUANDO A QUESTÃO DA TAXA FOR DEVIDAMENTE ESCLARECIDA ESTA INFORMAÇÃO
-# LRate SERÁ UTILIZADA PARA SER INSERIDA NO DEVIDO LOCAL.
 for rate in LRate:
     
     # Experimentos por LRate
@@ -152,6 +142,7 @@ for rate in LRate:
             if loss.data.numpy() == 0.0:            
                 saveExperiments(epochs,address);
                 numbers.append(epochs)
+                print("loss.data.numpy() == 0.0:")
                 epochs = 0
                 break   
         
