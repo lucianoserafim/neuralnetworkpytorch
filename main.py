@@ -10,23 +10,68 @@ Created on Mon Jul  6 17:31:09 2020
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
-import torch.nn.functional as F
+# import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import statistics as st
 import pandas as pd
+import os.path
 # import matplotlib.pyplot as plt
 # matplotlib inline
 # torch.manual_seed(2)
-
-# Função que guarda os resultados em arquivo
-def saveExperiments(epoc,addr):    
-    arq = open(addr, 'a')
+    
+# Função que guarda ou recupera as époćas.
+# 0 para salvar e 1 para recuperar
+def saveEpochs(addr,epoc,num):
+    arq = open(addr + 'experimento_' + str(num), 'a')
     text = str(epoc) + "\n"
+    arq.write(text)
+    arq.close()        
+    
+# Recupera as epocas por taxa e gera as estatísticas.
+def recoverEpochs(addr,rates):
+    numbers = []
+    table = []
+    for rate in rates:
+        isExist = os.path.exists(addr + 'experimento_' + str(rate))
+        if (isExist == True):
+            arq = open(addr + 'experimento_' + str(rate), 'r')
+            linha = arq.readlines()
+            numbers = list(map(int,linha))
+            data = {'Learning Rate':rate,'Min':np.min(numbers),'Mean':st.mean(numbers),'Max':np.max(numbers),'Standart Deviation':st.pstdev(numbers)}
+            table.append(data)
+            arq.close()
+    
+    df = pd.DataFrame(table)
+    string = df.to_latex(index=False)
+
+    arq = open('estatistics.tex', 'a')
+    text = string
     arq.write(text)
     arq.close()
     
-
+# Função que guarda o status dos experimentos
+def saveStatus(addr,rat,exper):
+    arq = open(addr + 'status', 'w+')
+    text = str(rat) + "\n" + str(exper)
+    arq.write(text)
+    arq.close()       
+    
+# Função que inicializa ou reinicializa o status dos experimentos
+def arqExist(addr,rat,expr):
+    isExist = os.path.exists(addr + 'status')
+    if (isExist == True):
+        arq = open(addr + 'status', 'r')
+        linha = arq.readlines()
+        arq.close()
+        rat = linha[0]
+        epoc = linha[1]
+        return np.float(rat),np.float(epoc)
+    else:
+        saveStatus(addr,rat,expr)
+        return rat,expr
+        
+# FUNÇÕES PYTORCH
 class XOR(nn.Module):
     def __init__(self, input_dim = 2, output_dim=1):
         super(XOR, self).__init__()
@@ -45,6 +90,7 @@ def weights_init(model):
             # initialize the weight tensor, here we use a normal distribution
             m.weight.data.normal_(0, 1)
 
+# PARAMETROS DE CONFIGURAÇÃO DO PYTORCH
 model = XOR()
 
 X = torch.Tensor([[0,0],[0,1], [1,0], [1,1]])
@@ -56,12 +102,12 @@ steps = X.size(0)
 
 # Limite de épocas necessárias sem mudança no erro
 # para que seja considerada a estagnação da rede
-stagnation = 5000
+stagnation = 500
 
 # Limite máximo de épocas para cada experimento
-epochLimit = 10000
+epochLimit = 1000
 
-# Número de experimentos
+# Número de experimentos por taxa
 experiments = 1200
 
 # Variável que conta o número de épocas
@@ -70,20 +116,33 @@ epochs = 0
 # Lista com um conjunto de taxas de aprendizado 
 LRate = [0.1,0.01,0.001,0.0001]
 
-# Estruturas para guaradar o número de épocas por experimento
-# e gerar o arquivo de saída em Tex
-numbers = []
-table = []
+# Variáveis auxiliares de inicialização
+rate = 0.0
+expr = 0
 
 # Endereço para guardar os arquivos gerados
-address = '/home/serafim/git/neuralnetworkpytorch/experimento_' + str(1)
+address = '/home/serafim/git/neuralnetworkpytorch/'
+
+# Verifica se o status já existe. Se não existir
+# então será dado inicio aos experimentos. Caso o status
+# exista é dado continuidade.
+rate,expr = arqExist(address,LRate[0],0)
 
 # Aqui teremos uma quantidade LRate de experimentos.
 # Para cada taxa vamos fazer um número experiments de vezes
-for rate in LRate:
+while True:
     
-    # Experimentos por LRate
-    for i in range(experiments):
+    print("Inicio para taxa: ",rate)
+    
+    # Se houver reinicialização do programa só
+    # será realizado os experimentos se ainda não
+    # foram todos feitos.
+    if expr == experiments and rate == LRate[len(LRate)-1]:
+        break
+    
+    while expr < experiments:
+        
+        saveStatus(address,rate,expr)
         
         # Inicialização dos pesos.
         weights_init(model)
@@ -140,24 +199,26 @@ for rate in LRate:
             # Salva o experimento se o erro é zero, ou seja,
             # se acertou os quatro padões.
             if loss.data.numpy() == 0.0:            
-                saveExperiments(epochs,address);
-                numbers.append(epochs)
-                print("loss.data.numpy() == 0.0:")
+                saveEpochs(address,epochs,rate)
                 epochs = 0
-                break   
+                break
         
-    # Preenche a tabela com as estatísticas    
-    data = {'Learning Rate':rate,'Min':np.min(numbers),'Mean':st.mean(numbers),'Max':np.max(numbers),'Standart Deviation':st.pstdev(numbers)}
-    table.append(data)
+        # Atualiza o número de experimentos por taxa
+        expr += 1
     
-# Salva em arquivo .tex
-df = pd.DataFrame(table)
-string = df.to_latex(index=False)
-
-arq = open('estatistics.tex', 'a')
-text = string
-arq.write(text)
-arq.close()    
+    # Verifica se é a última taxa.
+    # Se for então é matida a taxa e o
+    # número de experimentos caso seja preciso
+    # reiniciar.
+    if rate != LRate[len(LRate)-1]:
+        print("Término para taxa: ",rate)
+        rate = LRate[LRate.index(rate)+1]
+        expr = 0
+    # Salva o status atual do experimento
+    saveStatus(address,rate,expr)
+    
+# Recupera épocas por experimento e gera as estatísticas
+recoverEpochs(address,LRate)   
 
 # Plots
 '''
