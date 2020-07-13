@@ -35,7 +35,7 @@ def recoverEpochs(addr,rates,el,stag,expr):
     for rate in rates:
         isExist = os.path.exists(addr + 'experimento_rate_' + str(rate) + '_el_' + str(el) + '_stag_' + str(stag) + '_exper_' + str(expr))
         if (isExist == True):
-            arq = open(addr + 'experimento_' + str(rate), 'r')
+            arq = open(addr + 'experimento_rate_' + str(rate) + '_el_' + str(el) + '_stag_' + str(stag) + '_exper_' + str(expr), 'r')
             linha = arq.readlines()
             numbers = list(map(int,linha))
             data = {'Learning Rate':rate,'Min':np.min(numbers),'Mean':st.mean(numbers),'Max':np.max(numbers),'Standart Deviation':st.pstdev(numbers)}
