@@ -22,18 +22,18 @@ import os.path
     
 # Função que guarda ou recupera as époćas.
 # 0 para salvar e 1 para recuperar
-def saveEpochs(addr,epoc,num):
-    arq = open(addr + 'experimento_' + str(num), 'a')
+def saveEpochs(addr,epoc,rate,el,stag,expr):
+    arq = open(addr + 'experimento_rate_' + str(rate) + '_el_' + str(el) + '_stag_' + str(stag) + '_exper_' + str(expr), 'a')
     text = str(epoc) + "\n"
     arq.write(text)
     arq.close()        
     
 # Recupera as epocas por taxa e gera as estatísticas.
-def recoverEpochs(addr,rates):
+def recoverEpochs(addr,rates,el,stag,expr):
     numbers = []
     table = []
     for rate in rates:
-        isExist = os.path.exists(addr + 'experimento_' + str(rate))
+        isExist = os.path.exists(addr + 'experimento_rate_' + str(rate) + '_el_' + str(el) + '_stag_' + str(stag) + '_exper_' + str(expr))
         if (isExist == True):
             arq = open(addr + 'experimento_' + str(rate), 'r')
             linha = arq.readlines()
@@ -52,16 +52,16 @@ def recoverEpochs(addr,rates):
     
 # Função que guarda o status dos experimentos
 def saveStatus(addr,rat,exper):
-    arq = open(addr + 'status', 'w+')
+    arq = open(addr + 'status_' + str(rat), 'w+')
     text = str(rat) + "\n" + str(exper)
     arq.write(text)
     arq.close()       
     
 # Função que inicializa ou reinicializa o status dos experimentos
 def arqExist(addr,rat,expr):
-    isExist = os.path.exists(addr + 'status')
+    isExist = os.path.exists(addr + 'status_' + str(rat))
     if (isExist == True):
-        arq = open(addr + 'status', 'r')
+        arq = open(addr + 'status_' + str(rat), 'r')
         linha = arq.readlines()
         arq.close()
         rat = linha[0]
@@ -102,10 +102,10 @@ steps = X.size(0)
 
 # Limite de épocas necessárias sem mudança no erro
 # para que seja considerada a estagnação da rede
-stagnation = 500
+stagnation = 10000
 
 # Limite máximo de épocas para cada experimento
-epochLimit = 1000
+epochLimit = 20000
 
 # Número de experimentos por taxa
 experiments = 1200
@@ -199,7 +199,7 @@ while True:
             # Salva o experimento se o erro é zero, ou seja,
             # se acertou os quatro padões.
             if loss.data.numpy() == 0.0:            
-                saveEpochs(address,epochs,rate)
+                saveEpochs(address,epochs,rate,epochLimit,stagnation,experiments)
                 epochs = 0
                 break
         
@@ -210,15 +210,15 @@ while True:
     # Se for então é matida a taxa e o
     # número de experimentos caso seja preciso
     # reiniciar.
+    print("Término para taxa: ",rate)
     if rate != LRate[len(LRate)-1]:
-        print("Término para taxa: ",rate)
         rate = LRate[LRate.index(rate)+1]
         expr = 0
     # Salva o status atual do experimento
     saveStatus(address,rate,expr)
     
 # Recupera épocas por experimento e gera as estatísticas
-recoverEpochs(address,LRate)   
+recoverEpochs(address,LRate,epochLimit,stagnation,experiments)   
 
 # Plots
 '''
