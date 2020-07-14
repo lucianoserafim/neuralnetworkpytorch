@@ -33,9 +33,10 @@ def recoverEpochs(addr,rates,el,stag,expr):
     numbers = []
     table = []
     for rate in rates:
-        isExist = os.path.exists(addr + 'experimento_rate_' + str(rate) + '_el_' + str(el) + '_stag_' + str(stag) + '_exper_' + str(expr))
+        pathAddr = addr + 'experimento_rate_' + str(rate) + '_el_' + str(el) + '_stag_' + str(stag) + '_exper_' + str(expr)
+        isExist = os.path.exists(pathAddr)
         if (isExist == True):
-            arq = open(addr + 'experimento_rate_' + str(rate) + '_el_' + str(el) + '_stag_' + str(stag) + '_exper_' + str(expr), 'r')
+            arq = open(pathAddr, 'r')
             linha = arq.readlines()
             numbers = list(map(int,linha))
             data = {'Learning Rate':rate,'Min':np.min(numbers),'Mean':st.mean(numbers),'Max':np.max(numbers),'Standart Deviation':st.pstdev(numbers)}
@@ -65,8 +66,8 @@ def arqExist(addr,rat,expr):
         linha = arq.readlines()
         arq.close()
         rat = linha[0]
-        epoc = linha[1]
-        return np.float(rat),np.float(epoc)
+        numExpr = linha[1]
+        return np.float(rat),np.float(numExpr)
     else:
         saveStatus(addr,rat,expr)
         return rat,expr
@@ -102,10 +103,10 @@ steps = X.size(0)
 
 # Limite de épocas necessárias sem mudança no erro
 # para que seja considerada a estagnação da rede
-stagnation = 10000
+stagnation = 100000
 
 # Limite máximo de épocas para cada experimento
-epochLimit = 20000
+epochLimit = 200000
 
 # Número de experimentos por taxa
 experiments = 1200
