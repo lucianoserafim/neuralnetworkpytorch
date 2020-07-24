@@ -98,8 +98,8 @@ def arqExist(addr,lrat,expr):
             if (numExpr < expr) or (i == LRate[len(lrat)-1]):
                 return rat,numExpr
         else:
-            saveStatus(addr,i,0)
-            return i,0
+            saveStatus(addr,i,expr)
+            return i,expr
         
 # FUNÇÕES PYTORCH
 class XOR(nn.Module):
@@ -139,7 +139,7 @@ stagnation = 1000
 epochLimit = 150000
 
 # Número de experimentos por taxa
-experiments = 5
+experiments = 2
 # Variável que conta o número de épocas
 epochs = 0
 
@@ -156,7 +156,7 @@ address = '/home/serafim/git/neuralnetworkpytorch/estatistics/'
 # Verifica se o status já existe. Se não existir
 # então será dado inicio aos experimentos. Caso o status
 # exista é dado continuidade.
-rate,expr = arqExist(address,LRate,experiments)
+rate,expr = arqExist(address,LRate,expr)
 
 # Aqui teremos uma quantidade LRate de experimentos.
 # Para cada taxa vamos fazer um número experiments de vezes
