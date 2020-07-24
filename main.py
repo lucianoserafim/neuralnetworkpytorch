@@ -46,7 +46,7 @@ def recoverEpochs(addr,rates,el,stag,expr):
     df = pd.DataFrame(table)
     string = df.to_latex(index=False)
 
-    arq = open('estatistics.tex', 'a')
+    arq = open(addr + 'estatistics.tex', 'a')
     text = string
     arq.write(text)
     arq.close()
@@ -56,21 +56,50 @@ def saveStatus(addr,rat,exper):
     arq = open(addr + 'status_' + str(rat), 'w+')
     text = str(rat) + "\n" + str(exper)
     arq.write(text)
-    arq.close()       
+    arq.close()
     
-# Função que inicializa ou reinicializa o status dos experimentos
-def arqExist(addr,rat,expr):
-    isExist = os.path.exists(addr + 'status_' + str(rat))
+# Função que guarda o número de épocas estagnadas
+# ou em limite máximo.
+def saveError(addr,rat,tp,value):
+    arq = open(addr + tp + '_' + str(rat), 'w+')
+    text = str(value)
+    arq.write(text)
+    arq.close()
+
+# Função que recupera o número de épocas estagnadas
+# ou em limite máximo.    
+def recoverError(addr,rat,tp,value):
+    isExist = os.path.exists(addr + tp + '_' + str(rat))
     if (isExist == True):
-        arq = open(addr + 'status_' + str(rat), 'r')
-        linha = arq.readlines()
+        arq = open(addr + tp + '_' + str(rat), 'r')
+        linha = arq.readline()
         arq.close()
-        rat = linha[0]
-        numExpr = linha[1]
-        return np.float(rat),np.float(numExpr)
+        
+        number = np.float(linha)
+        soma = value + number
+        text = str(soma)
+        
+        arq = open(addr + tp + '_' + str(rat), 'w')
+        arq.write(text)
+        arq.close()
     else:
-        saveStatus(addr,rat,expr)
-        return rat,expr
+        saveError(addr,rat,tp,value)
+        
+# Função que inicializa ou reinicializa o status dos experimentos
+def arqExist(addr,lrat,expr): 
+    for i in lrat:
+        isExist = os.path.exists(addr + 'status_' + str(i))
+        if (isExist == True):
+            arq = open(addr + 'status_' + str(i), 'r')
+            linha = arq.readlines()
+            arq.close()
+            rat = np.float(linha[0])
+            numExpr = np.float(linha[1])
+            if (numExpr < expr) or (i == LRate[len(lrat)-1]):
+                return rat,numExpr
+        else:
+            saveStatus(addr,i,0)
+            return i,0
         
 # FUNÇÕES PYTORCH
 class XOR(nn.Module):
@@ -83,6 +112,7 @@ class XOR(nn.Module):
         x = self.lin1(x)
         x = torch.sigmoid(x)
         x = self.lin2(x)
+        x = torch.sigmoid(x)
         return x
     
 def weights_init(model):
@@ -103,14 +133,13 @@ steps = X.size(0)
 
 # Limite de épocas necessárias sem mudança no erro
 # para que seja considerada a estagnação da rede
-stagnation = 100000
+stagnation = 1000
 
 # Limite máximo de épocas para cada experimento
-epochLimit = 200000
+epochLimit = 150000
 
 # Número de experimentos por taxa
-experiments = 1200
-
+experiments = 5
 # Variável que conta o número de épocas
 epochs = 0
 
@@ -119,15 +148,15 @@ LRate = [0.1,0.01,0.001,0.0001]
 
 # Variáveis auxiliares de inicialização
 rate = 0.0
-expr = 0
+expr = 1
 
 # Endereço para guardar os arquivos gerados
-address = '/home/serafim/git/neuralnetworkpytorch/'
+address = '/home/serafim/git/neuralnetworkpytorch/estatistics/'
 
 # Verifica se o status já existe. Se não existir
 # então será dado inicio aos experimentos. Caso o status
 # exista é dado continuidade.
-rate,expr = arqExist(address,LRate[0],0)
+rate,expr = arqExist(address,LRate,experiments)
 
 # Aqui teremos uma quantidade LRate de experimentos.
 # Para cada taxa vamos fazer um número experiments de vezes
@@ -152,7 +181,7 @@ while True:
         # Otimizador.
         optimizer = optim.SGD(model.parameters(), lr=rate, momentum=0.9)
         
-        # Variáveis que contabilizam os erros para
+        # Variáveis que contabilizam os acertos e os erros para
         # estagnação da rede.
         previousError = 1.0
         currentError = 0.0
@@ -163,19 +192,28 @@ while True:
         # de épocas.
         while True:
             
+            countHit = 0
+            
             # São apresentados quatro padrões aleatórios.
             # Ao final da apresentação dos quatro padrões
             # contabiliza-se uma época.
             for j in range(steps):
-                data_point = np.random.randint(X.size(0))
-                x_var = Variable(X[data_point], requires_grad=False)
-                y_var = Variable(Y[data_point], requires_grad=False)
+                #data_point = np.random.randint(X.size(0))
+                #x_var = Variable(X[data_point], requires_grad=False)
+                #y_var = Variable(Y[data_point], requires_grad=False)
+                
+                x_var = Variable(X[j], requires_grad=False)
+                y_var = Variable(Y[j], requires_grad=False)
                 
                 optimizer.zero_grad()
                 y_hat = model(x_var)
                 loss = loss_func.forward(y_hat, y_var)
                 loss.backward()
                 optimizer.step()
+                
+                if (y_hat > 0.5 and y_var == 1) or (y_hat < 0.5 and y_var == 0):
+                    print("Saida Esperada ",y_var," Saida encontrada ", y_hat ," Erro ",loss.data.numpy())
+                    countHit += 1
             
             # Atribui o erro atual
             currentError = loss.data.numpy()
@@ -187,8 +225,16 @@ while True:
                 countError = 0
                 
             # Verifica se a rede estagnou
-            # Se atingir o limite de epocas o experimento para
-            if countError == stagnation or epochs == epochLimit:
+            if countError == stagnation:
+                # Salva a quantidade de experimentos estagnados
+                recoverError(address,rate,'stagnation',1)
+                epochs = 0
+                break
+            
+            # Se atingiu o limite de epocas o experimento para
+            if epochs == epochLimit:
+                # Salva a quantidade de experimentos  no limite de épocas
+                recoverError(address,rate,'epochsLimit',1)
                 epochs = 0
                 break
                 
@@ -196,16 +242,17 @@ while True:
             previousError = currentError
                 
             epochs += 1
-               
-            # Salva o experimento se o erro é zero, ou seja,
-            # se acertou os quatro padões.
-            if loss.data.numpy() == 0.0:            
+            
+            if countHit == 4:
                 saveEpochs(address,epochs,rate,epochLimit,stagnation,experiments)
                 epochs = 0
                 break
         
         # Atualiza o número de experimentos por taxa
         expr += 1
+        
+        # Salva o status atual do experimento
+        saveStatus(address,rate,expr)
     
     # Verifica se é a última taxa.
     # Se for então é matida a taxa e o
@@ -215,8 +262,6 @@ while True:
     if rate != LRate[len(LRate)-1]:
         rate = LRate[LRate.index(rate)+1]
         expr = 0
-    # Salva o status atual do experimento
-    saveStatus(address,rate,expr)
     
 # Recupera épocas por experimento e gera as estatísticas
 recoverEpochs(address,LRate,epochLimit,stagnation,experiments)   
